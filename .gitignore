@@ -1,0 +1,16 @@
+.DS_Store
+.vscode/
+.env
+.env.*
+!.env.example
+*.o
+*.out
+build/
+backend/server
+agent/process_monitor_db
+app
+os/file-allocation/test_contiguous
+os/file-allocation/test_fragmentation
+os/file-allocation/test_persistence
+os/deadlock/test_bankers
+os/deadlock/test_persistence

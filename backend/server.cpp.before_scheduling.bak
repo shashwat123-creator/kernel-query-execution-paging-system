@@ -1,0 +1,118 @@
+#include "httplib.h"
+#include "../database/oracle_db.h"
+
+#include <cstdlib>
+#include <iostream>
+#include <mutex>
+#include <string>
+
+int main() {
+    httplib::Server server;
+    server.set_default_headers({
+    {"Access-Control-Allow-Origin", "http://localhost:5500"},
+    {"Access-Control-Allow-Methods", "GET, OPTIONS"},
+    {"Access-Control-Allow-Headers", "Content-Type"}
+    });
+    OracleDB db;
+    std::mutex dbMutex;
+
+    const char* password = std::getenv("ORACLE_APP_PASSWORD");
+
+    if (password == nullptr || *password == '\0') {
+        std::cerr << "Set ORACLE_APP_PASSWORD before starting the server.\n";
+        return 1;
+    }
+
+    if (!db.connect("KERNEL_APP", password, "//localhost:1521/FREEPDB1")) {
+        std::cerr << "Oracle connection failed.\n";
+        return 1;
+    }
+
+    server.Get("/api/health",
+        [](const httplib::Request&, httplib::Response& res) {
+            res.set_content(
+                R"({"status":"ok","backend":"C++"})",
+                "application/json"
+            );
+        });
+
+    server.Get("/api/processes",
+        [&db, &dbMutex](const httplib::Request& req, httplib::Response& res) {
+            int computerId = 1;
+
+            if (req.has_param("computer_id")) {
+                try {
+                    computerId = std::stoi(
+                        req.get_param_value("computer_id")
+                    );
+                } catch (...) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Invalid computer_id"})",
+                        "application/json"
+                    );
+                    return;
+                }
+            }
+
+            if (computerId <= 0) {
+                res.status = 400;
+                res.set_content(
+                    R"({"error":"computer_id must be positive"})",
+                    "application/json"
+                );
+                return;
+            }
+
+            res.set_header("Cache-Control", "no-store");
+            res.set_content(
+                ([&]() { std::lock_guard<std::mutex> lock(dbMutex); return db.getProcessesJson(computerId); })(),
+                "application/json"
+            );
+        });
+
+
+    server.Get("/api/metrics",
+        [&db, &dbMutex](const httplib::Request& req, httplib::Response& res) {
+            int computerId = 1;
+
+            if (req.has_param("computer_id")) {
+                try {
+                    computerId = std::stoi(
+                        req.get_param_value("computer_id")
+                    );
+                } catch (...) {
+                    res.status = 400;
+                    res.set_content(
+                        R"({"error":"Invalid computer_id"})",
+                        "application/json"
+                    );
+                    return;
+                }
+            }
+
+            if (computerId <= 0) {
+                res.status = 400;
+                res.set_content(
+                    R"({"error":"computer_id must be positive"})",
+                    "application/json"
+                );
+                return;
+            }
+
+            res.set_header("Cache-Control", "no-store");
+            res.set_content(
+                ([&]() { std::lock_guard<std::mutex> lock(dbMutex); return db.getMetricsJson(computerId); })(),
+                "application/json"
+            );
+        });
+
+    std::cout << "Kernel Query API running at http://localhost:8080\n";
+
+    if (!server.listen("127.0.0.1", 8080)) {
+        std::cerr << "Failed to start HTTP server on port 8080.\n";
+        return 1;
+    }
+
+    return 0;
+}

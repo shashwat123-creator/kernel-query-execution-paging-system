@@ -1,0 +1,126 @@
+const API_BASE = "http://localhost:8080/api";
+
+const totalProcesses = document.getElementById("totalProcesses");
+const computerName = document.getElementById("computerName");
+const apiStatus = document.getElementById("apiStatus");
+const lastUpdated = document.getElementById("lastUpdated");
+const recordCount = document.getElementById("recordCount");
+const processTable = document.getElementById("processTable");
+const searchInput = document.getElementById("searchInput");
+const computerIdInput = document.getElementById("computerId");
+const message = document.getElementById("message");
+const refreshBtn = document.getElementById("refreshBtn");
+
+let processes = [];
+
+function showMessage(text, isError = false) {
+    message.textContent = text;
+    message.classList.toggle("error", isError);
+}
+
+function renderProcesses() {
+    const query = searchInput.value.trim().toLowerCase();
+
+    const filtered = processes.filter(process =>
+        String(process.pid).includes(query) ||
+        process.process_name.toLowerCase().includes(query) ||
+        process.computer_name.toLowerCase().includes(query)
+    );
+
+    processTable.replaceChildren();
+
+    if (filtered.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 3;
+        cell.textContent = processes.length
+            ? "No processes match your search."
+            : "No process records found for this computer.";
+        row.appendChild(cell);
+        processTable.appendChild(row);
+    } else {
+        const fragment = document.createDocumentFragment();
+
+        for (const process of filtered) {
+            const row = document.createElement("tr");
+
+            const pidCell = document.createElement("td");
+            pidCell.className = "pid";
+            pidCell.textContent = process.pid;
+
+            const nameCell = document.createElement("td");
+            nameCell.className = "process-name";
+            nameCell.textContent = process.process_name;
+
+            const computerCell = document.createElement("td");
+            computerCell.textContent = process.computer_name;
+
+            row.append(pidCell, nameCell, computerCell);
+            fragment.appendChild(row);
+        }
+
+        processTable.appendChild(fragment);
+    }
+
+    recordCount.textContent =
+        `${filtered.length} of ${processes.length} records`;
+}
+
+async function loadProcesses() {
+    const computerId = Number(computerIdInput.value);
+
+    if (!Number.isInteger(computerId) || computerId <= 0) {
+        showMessage("Enter a valid positive computer ID.", true);
+        return;
+    }
+
+    refreshBtn.disabled = true;
+    showMessage("Loading process records...");
+
+    try {
+        const response = await fetch(
+            `${API_BASE}/processes?computer_id=${encodeURIComponent(computerId)}`,
+            { cache: "no-store" }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || data.error) {
+            throw new Error(data.error || `HTTP ${response.status}`);
+        }
+
+        if (!Array.isArray(data.processes)) {
+            throw new Error("Unexpected API response format.");
+        }
+
+        processes = data.processes.map(process => ({
+            pid: process.pid,
+            process_name: String(process.process_name ?? ""),
+            computer_name: String(process.computer_name ?? "")
+        }));
+
+        totalProcesses.textContent = data.count ?? processes.length;
+        computerName.textContent =
+            processes.length > 0 ? processes[0].computer_name : "No records";
+        apiStatus.textContent = "Online";
+        lastUpdated.textContent =
+            `Updated ${new Date().toLocaleTimeString()}`;
+
+        renderProcesses();
+        showMessage("Process records loaded successfully.");
+    } catch (error) {
+        apiStatus.textContent = "Offline / Error";
+        showMessage(
+            `Could not load processes: ${error.message}. Check that the C++ API is running.`,
+            true
+        );
+    } finally {
+        refreshBtn.disabled = false;
+    }
+}
+
+refreshBtn.addEventListener("click", loadProcesses);
+searchInput.addEventListener("input", renderProcesses);
+computerIdInput.addEventListener("change", loadProcesses);
+
+loadProcesses();

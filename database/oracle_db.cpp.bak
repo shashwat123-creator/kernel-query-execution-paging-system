@@ -1,0 +1,146 @@
+#include "oracle_db.h"
+#include <iostream>
+
+using namespace std;
+using namespace oracle::occi;
+
+OracleDB::OracleDB() : env(nullptr), conn(nullptr) {}
+
+OracleDB::~OracleDB() {
+    disconnect();
+}
+
+bool OracleDB::connect(const string& username,
+                       const string& password,
+                       const string& connectString) {
+    try {
+        env = Environment::createEnvironment();
+        conn = env->createConnection(username, password, connectString);
+
+        cout << "Connected to Oracle Database.\n";
+        return true;
+    }
+    catch (SQLException& e) {
+        cerr << "Oracle connection failed: " << e.getMessage() << '\n';
+
+        if (env != nullptr) {
+            Environment::terminateEnvironment(env);
+            env = nullptr;
+        }
+
+        conn = nullptr;
+        return false;
+    }
+}
+
+void OracleDB::disconnect() {
+    if (env != nullptr) {
+        if (conn != nullptr) {
+            env->terminateConnection(conn);
+            conn = nullptr;
+        }
+
+        Environment::terminateEnvironment(env);
+        env = nullptr;
+    }
+}
+
+bool OracleDB::isConnected() const {
+    return conn != nullptr;
+}
+
+int OracleDB::getOrCreateProcess(int computerId, int pid,
+                                 const string& processName) {
+    if (conn == nullptr) return -1;
+
+    Statement* stmt = nullptr;
+
+    try {
+        stmt = conn->createStatement(
+            "SELECT process_id FROM PROCESS "
+            "WHERE computer_id = :1 AND pid = :2"
+        );
+        stmt->setInt(1, computerId);
+        stmt->setInt(2, pid);
+
+        ResultSet* rs = stmt->executeQuery();
+
+        if (rs->next()) {
+            int processId = rs->getInt(1);
+            stmt->closeResultSet(rs);
+            conn->terminateStatement(stmt);
+            return processId;
+        }
+
+        stmt->closeResultSet(rs);
+        conn->terminateStatement(stmt);
+        stmt = nullptr;
+
+        stmt = conn->createStatement(
+            "INSERT INTO PROCESS "
+            "(computer_id, pid, process_name, process_state) "
+            "VALUES (:1, :2, :3, :4) "
+            "RETURNING process_id INTO :5"
+        );
+        stmt->setInt(1, computerId);
+        stmt->setInt(2, pid);
+        stmt->setString(3, processName);
+        stmt->setString(4, "RUNNING");
+        stmt->registerOutParam(5, OCCINUMBER);
+
+        stmt->executeUpdate();
+
+        int processId = stmt->getInt(5);
+        conn->commit();
+        conn->terminateStatement(stmt);
+
+        return processId;
+    }
+    catch (SQLException& e) {
+        cerr << "Process insert failed: " << e.getMessage() << '\n';
+
+        if (stmt != nullptr) {
+            try { conn->terminateStatement(stmt); } catch (...) {}
+        }
+
+        try { conn->rollback(); } catch (...) {}
+        return -1;
+    }
+}
+
+bool OracleDB::insertResourceUsage(int processId,
+                                   double cpuUsage,
+                                   double memoryUsage) {
+    if (conn == nullptr) return false;
+
+    Statement* stmt = nullptr;
+
+    try {
+        stmt = conn->createStatement(
+            "INSERT INTO RESOURCE_USAGE "
+            "(process_id, cpu_usage_percent, memory_usage_mb) "
+            "VALUES (:1, :2, :3)"
+        );
+
+        stmt->setInt(1, processId);
+        stmt->setDouble(2, cpuUsage);
+        stmt->setDouble(3, memoryUsage);
+
+        stmt->executeUpdate();
+        conn->commit();
+        conn->terminateStatement(stmt);
+
+        return true;
+    }
+    catch (SQLException& e) {
+        cerr << "Resource usage insert failed: "
+             << e.getMessage() << '\n';
+
+        if (stmt != nullptr) {
+            try { conn->terminateStatement(stmt); } catch (...) {}
+        }
+
+        try { conn->rollback(); } catch (...) {}
+        return false;
+    }
+}

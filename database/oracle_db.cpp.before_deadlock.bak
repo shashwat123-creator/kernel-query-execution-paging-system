@@ -1,0 +1,482 @@
+#include <stdexcept>
+#include <algorithm>
+#include <sstream>
+#include "oracle_db.h"
+#include <iostream>
+
+using namespace std;
+using namespace oracle::occi;
+
+OracleDB::OracleDB() : env(nullptr), conn(nullptr) {}
+
+OracleDB::~OracleDB() {
+    disconnect();
+}
+
+bool OracleDB::connect(const string& username,
+                       const string& password,
+                       const string& connectString) {
+    try {
+        env = Environment::createEnvironment();
+        conn = env->createConnection(username, password, connectString);
+
+        cout << "Connected to Oracle Database.\n";
+        return true;
+    }
+    catch (SQLException& e) {
+        cerr << "Oracle connection failed: " << e.getMessage() << '\n';
+
+        if (env != nullptr) {
+            Environment::terminateEnvironment(env);
+            env = nullptr;
+        }
+
+        conn = nullptr;
+        return false;
+    }
+}
+
+void OracleDB::disconnect() {
+    if (env != nullptr) {
+        if (conn != nullptr) {
+            env->terminateConnection(conn);
+            conn = nullptr;
+        }
+
+        Environment::terminateEnvironment(env);
+        env = nullptr;
+    }
+}
+
+bool OracleDB::isConnected() const {
+    return conn != nullptr;
+}
+
+int OracleDB::getOrCreateProcess(int computerId, int pid,
+                                 const string& processName) {
+    if (conn == nullptr) return -1;
+
+    Statement* stmt = nullptr;
+    ResultSet* rs = nullptr;
+
+    try {
+        // Look for an existing process.
+        stmt = conn->createStatement(
+            "SELECT process_id FROM PROCESS "
+            "WHERE computer_id = :1 AND pid = :2"
+        );
+        stmt->setInt(1, computerId);
+        stmt->setInt(2, pid);
+
+        rs = stmt->executeQuery();
+
+        if (rs->next()) {
+            int processId = rs->getInt(1);
+            stmt->closeResultSet(rs);
+            rs = nullptr;
+            conn->terminateStatement(stmt);
+            stmt = nullptr;
+            return processId;
+        }
+
+        stmt->closeResultSet(rs);
+        rs = nullptr;
+        conn->terminateStatement(stmt);
+        stmt = nullptr;
+
+        // Insert the process if it does not exist.
+        stmt = conn->createStatement(
+            "INSERT INTO PROCESS "
+            "(computer_id, pid, process_name, process_state) "
+            "VALUES (:1, :2, :3, :4)"
+        );
+        stmt->setInt(1, computerId);
+        stmt->setInt(2, pid);
+        stmt->setString(3, processName);
+        stmt->setString(4, "RUNNING");
+
+        stmt->executeUpdate();
+        conn->commit();
+        conn->terminateStatement(stmt);
+        stmt = nullptr;
+
+        // Read back the generated ID.
+        stmt = conn->createStatement(
+            "SELECT process_id FROM PROCESS "
+            "WHERE computer_id = :1 AND pid = :2"
+        );
+        stmt->setInt(1, computerId);
+        stmt->setInt(2, pid);
+
+        rs = stmt->executeQuery();
+
+        if (rs->next()) {
+            int processId = rs->getInt(1);
+            stmt->closeResultSet(rs);
+            rs = nullptr;
+            conn->terminateStatement(stmt);
+            stmt = nullptr;
+            return processId;
+        }
+
+        stmt->closeResultSet(rs);
+        rs = nullptr;
+        conn->terminateStatement(stmt);
+        stmt = nullptr;
+
+        cerr << "Process was inserted but its ID could not be retrieved.\n";
+        return -1;
+    }
+    catch (SQLException& e) {
+        cerr << "Process insert/find failed: "
+             << e.getMessage() << '\n';
+
+        if (rs != nullptr && stmt != nullptr) {
+            try {
+                stmt->closeResultSet(rs);
+            } catch (...) {}
+        }
+
+        if (stmt != nullptr) {
+            try {
+                conn->terminateStatement(stmt);
+            } catch (...) {}
+        }
+
+        try {
+            conn->rollback();
+        } catch (...) {}
+
+        return -1;
+    }
+}
+
+bool OracleDB::insertResourceUsage(int processId,
+                                   double cpuUsage,
+                                   double memoryUsage) {
+    if (conn == nullptr) return false;
+
+    Statement* stmt = nullptr;
+
+    try {
+        stmt = conn->createStatement(
+            "INSERT INTO RESOURCE_USAGE "
+            "(process_id, cpu_usage_percent, memory_usage_mb) "
+            "VALUES (:1, :2, :3)"
+        );
+
+        stmt->setInt(1, processId);
+        stmt->setDouble(2, cpuUsage);
+        stmt->setDouble(3, memoryUsage);
+
+        stmt->executeUpdate();
+        conn->commit();
+        conn->terminateStatement(stmt);
+
+        return true;
+    }
+    catch (SQLException& e) {
+        cerr << "Resource usage insert failed: "
+             << e.getMessage() << '\n';
+
+        if (stmt != nullptr) {
+            try { conn->terminateStatement(stmt); } catch (...) {}
+        }
+
+        try { conn->rollback(); } catch (...) {}
+        return false;
+    }
+}
+
+std::string OracleDB::getProcessesJson(int computerId) {
+    using namespace oracle::occi;
+
+    if (conn == nullptr) {
+        return R"({"error":"Database not connected"})";
+    }
+
+    Statement* stmt = nullptr;
+    ResultSet* rs = nullptr;
+    std::ostringstream json;
+    bool first = true;
+
+    try {
+        stmt = conn->createStatement(
+            "SELECT p.pid, p.process_name, c.computer_name "
+            "FROM PROCESS p "
+            "JOIN COMPUTER c ON p.computer_id = c.computer_id "
+            "WHERE p.computer_id = :1 "
+            "ORDER BY p.pid"
+        );
+
+        stmt->setInt(1, computerId);
+        rs = stmt->executeQuery();
+
+        json << "{\"count\":";
+        std::ostringstream rows;
+        int count = 0;
+
+        rows << "\"processes\":[";
+
+        while (rs->next()) {
+            if (!first) {
+                rows << ",";
+            }
+            first = false;
+
+            int pid = rs->getInt(1);
+            std::string name = rs->getString(2);
+            std::string computer = rs->getString(3);
+
+            auto escapeJson = [](const std::string& value) {
+                std::string escaped;
+                for (char ch : value) {
+                    switch (ch) {
+                        case '"': escaped += "\\\""; break;
+                        case '\\': escaped += "\\\\"; break;
+                        case '\n': escaped += "\\n"; break;
+                        case '\r': escaped += "\\r"; break;
+                        case '\t': escaped += "\\t"; break;
+                        default:
+                            if (static_cast<unsigned char>(ch) < 0x20) {
+                                escaped += ' ';
+                            } else {
+                                escaped += ch;
+                            }
+                    }
+                }
+                return escaped;
+            };
+
+            rows << "{\"pid\":" << pid
+                 << ",\"process_name\":\"" << escapeJson(name)
+                 << "\",\"computer_name\":\"" << escapeJson(computer)
+                 << "\"}";
+
+            ++count;
+        }
+
+        rows << "]";
+
+        stmt->closeResultSet(rs);
+        rs = nullptr;
+        conn->terminateStatement(stmt);
+        stmt = nullptr;
+
+        json << count << "," << rows.str() << "}";
+        return json.str();
+    }
+    catch (SQLException& e) {
+        std::cerr << "Process query failed: "
+                  << e.getMessage() << '\n';
+
+        if (stmt != nullptr) {
+            try {
+                if (rs != nullptr) {
+                    stmt->closeResultSet(rs);
+                }
+            } catch (...) {}
+
+            try {
+                conn->terminateStatement(stmt);
+            } catch (...) {}
+        }
+
+        return R"({"error":"Failed to query processes"})";
+    }
+}
+
+
+std::string OracleDB::getMetricsJson(int computerId) {
+    using namespace oracle::occi;
+
+    if (conn == nullptr) {
+        return R"({"error":"Database not connected"})";
+    }
+
+    Statement* stmt = nullptr;
+    ResultSet* rs = nullptr;
+    std::ostringstream rows;
+    int count = 0;
+
+    auto escapeJson = [](const std::string& value) {
+        std::string out;
+        for (unsigned char ch : value) {
+            switch (ch) {
+                case '"': out += "\\\""; break;
+                case '\\': out += "\\\\"; break;
+                case '\n': out += "\\n"; break;
+                case '\r': out += "\\r"; break;
+                case '\t': out += "\\t"; break;
+                default:
+                    if (ch < 0x20) out += ' ';
+                    else out += static_cast<char>(ch);
+            }
+        }
+        return out;
+    };
+
+    try {
+        stmt = conn->createStatement(
+            "SELECT pid, process_name, cpu_usage_percent, "
+            "memory_usage_mb, recorded_at FROM ("
+            " SELECT p.pid, p.process_name, r.cpu_usage_percent, "
+            " r.memory_usage_mb, "
+            " TO_CHAR(r.recorded_at, 'YYYY-MM-DD HH24:MI:SS') AS recorded_at, "
+            " ROW_NUMBER() OVER ("
+            "   PARTITION BY p.process_id "
+            "   ORDER BY r.recorded_at DESC, r.usage_id DESC"
+            " ) AS rn "
+            " FROM PROCESS p "
+            " JOIN RESOURCE_USAGE r ON r.process_id = p.process_id "
+            " WHERE p.computer_id = :1"
+            ") WHERE rn = 1 ORDER BY pid"
+        );
+
+        stmt->setInt(1, computerId);
+        rs = stmt->executeQuery();
+
+        while (rs->next()) {
+            if (count > 0) rows << ",";
+
+            int pid = rs->getInt(1);
+            std::string name = rs->getString(2);
+            double cpu = rs->getDouble(3);
+            double memory = rs->getDouble(4);
+            std::string recordedAt = rs->getString(5);
+
+            rows << "{\"pid\":" << pid
+                 << ",\"process_name\":\"" << escapeJson(name) << "\""
+                 << ",\"cpu_usage_percent\":" << cpu
+                 << ",\"memory_usage_mb\":" << memory
+                 << ",\"recorded_at\":\"" << escapeJson(recordedAt) << "\""
+                 << "}";
+
+            ++count;
+        }
+
+        stmt->closeResultSet(rs);
+        rs = nullptr;
+        conn->terminateStatement(stmt);
+        stmt = nullptr;
+
+        std::ostringstream result;
+        result << "{\"count\":" << count
+               << ",\"metrics\":[" << rows.str() << "]}";
+        return result.str();
+    }
+    catch (SQLException& e) {
+        std::cerr << "Metrics query failed: "
+                  << e.getMessage() << '\n';
+
+        if (stmt != nullptr) {
+            if (rs != nullptr) {
+                try { stmt->closeResultSet(rs); } catch (...) {}
+            }
+            try { conn->terminateStatement(stmt); } catch (...) {}
+        }
+
+        return R"({"error":"Failed to query metrics"})";
+    }
+}
+
+// Persist a complete scheduling run and its per-process results.
+int OracleDB::saveSchedulingRun(
+    const std::string& algorithm,
+    int timeQuantum,
+    const std::vector<Process>& processes,
+    const SchedulingReport& report
+) {
+    using namespace oracle::occi;
+
+    if (conn == nullptr ||
+        (algorithm != "FCFS" && algorithm != "ROUND_ROBIN") ||
+        processes.size() != report.results.size() ||
+        (algorithm == "ROUND_ROBIN" && timeQuantum <= 0)) {
+        return -1;
+    }
+
+    Statement* runStmt = nullptr;
+    Statement* resultStmt = nullptr;
+    int runId = -1;
+
+    try {
+        runStmt = conn->createStatement(
+            "INSERT INTO SCHEDULING_RUN "
+            "(algorithm, time_quantum, process_count, "
+            "average_waiting_time, average_turnaround_time) "
+            "VALUES (:1, :2, :3, :4, :5) "
+            "RETURNING run_id INTO :6"
+        );
+
+        runStmt->setString(1, algorithm);
+
+        if (algorithm == "FCFS")
+            runStmt->setNull(2, oracle::occi::OCCIINT);
+        else
+            runStmt->setInt(2, timeQuantum);
+
+        runStmt->setInt(3, static_cast<int>(processes.size()));
+        runStmt->setDouble(4, report.averageWaitingTime);
+        runStmt->setDouble(5, report.averageTurnaroundTime);
+        runStmt->registerOutParam(6, oracle::occi::OCCIINT);
+
+        runStmt->executeUpdate();
+        runId = runStmt->getInt(6);
+
+        conn->terminateStatement(runStmt);
+        runStmt = nullptr;
+
+        resultStmt = conn->createStatement(
+            "INSERT INTO SCHEDULING_RESULT "
+            "(run_id, pid, arrival_time, burst_time, completion_time, "
+            "turnaround_time, waiting_time, response_time) "
+            "VALUES (:1, :2, :3, :4, :5, :6, :7, :8)"
+        );
+
+        for (const auto& result : report.results) {
+            auto it = std::find_if(
+                processes.begin(), processes.end(),
+                [&](const Process& p) { return p.pid == result.pid; }
+            );
+
+            if (it == processes.end())
+                throw std::runtime_error("Scheduling result PID not found");
+
+            resultStmt->setInt(1, runId);
+            resultStmt->setInt(2, result.pid);
+            resultStmt->setInt(3, it->arrivalTime);
+            resultStmt->setInt(4, it->burstTime);
+            resultStmt->setInt(5, result.completionTime);
+            resultStmt->setInt(6, result.turnaroundTime);
+            resultStmt->setInt(7, result.waitingTime);
+            resultStmt->setInt(8, result.responseTime);
+            resultStmt->executeUpdate();
+        }
+
+        conn->terminateStatement(resultStmt);
+        resultStmt = nullptr;
+
+        conn->commit();
+        return runId;
+    }
+    catch (SQLException& e) {
+        std::cerr << "Saving scheduling run failed: "
+                  << e.getMessage() << '\n';
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Saving scheduling run failed: "
+                  << e.what() << '\n';
+    }
+
+    if (runStmt != nullptr) {
+        try { conn->terminateStatement(runStmt); } catch (...) {}
+    }
+
+    if (resultStmt != nullptr) {
+        try { conn->terminateStatement(resultStmt); } catch (...) {}
+    }
+
+    try { conn->rollback(); } catch (...) {}
+    return -1;
+}
