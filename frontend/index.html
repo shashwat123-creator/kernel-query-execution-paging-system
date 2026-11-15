@@ -19,6 +19,7 @@
         <nav>
             <a class="nav-item active" href="#dashboard">▦ &nbsp; Dashboard</a>
             <a class="nav-item" href="#fileAllocationPanel">▦ &nbsp; File Allocation</a>
+            <a class="nav-item" href="#pagingSimulator">▤ &nbsp; Paging Simulator</a>
             <a class="nav-item" href="#processes">▤ &nbsp; Processes</a>
             <a class="nav-item" href="#system">⌘ &nbsp; System overview</a>
         </nav>
@@ -316,6 +317,134 @@
                         <tbody id="fileAllocationResultsBody"></tbody>
                     </table>
                 </div>
+            </div>
+        </section>
+
+        
+        <!-- Paging Simulator -->
+        <section class="panel" id="pagingSimulator">
+            <div class="panel-header">
+                <div>
+                    <h2>Virtual Memory Paging Simulator</h2>
+                    <p>Demand paging · FIFO · LRU · Optimal page replacement</p>
+                </div>
+                <span class="record-count">OS Module</span>
+            </div>
+
+            <form id="pagingForm">
+                <div class="paging-controls">
+                    <label>
+                        Replacement algorithm
+                        <select id="pagingAlgorithm">
+                            <option value="FIFO">FIFO</option>
+                            <option value="LRU">LRU</option>
+                            <option value="OPTIMAL">Optimal</option>
+                        </select>
+                    </label>
+
+                    <label>
+                        Number of frames
+                        <input id="pagingFrameCount" type="number"
+                               min="1" max="100" value="3" required>
+                    </label>
+
+                    <label class="paging-reference-field">
+                        Page reference string
+                        <input id="pagingReferenceString" type="text"
+                               value="7,0,1,2,0,3,0,4,2,3,0,3,2"
+                               placeholder="7,0,1,2,0,3,0,4"
+                               required>
+                    </label>
+                </div>
+
+                <p class="paging-hint">
+                    Enter non-negative page numbers separated by commas.
+                    Maximum 200 references and 100 frames.
+                </p>
+
+                <div class="paging-actions">
+                    <button type="submit" id="runPagingButton">
+                        Run Simulation
+                    </button>
+                    <button type="button" id="comparePagingButton">
+                        Compare All Algorithms
+                    </button>
+                </div>
+
+                <p id="pagingStatus" role="status" aria-live="polite">
+                    Ready to simulate page replacement.
+                </p>
+            </form>
+
+            <div id="pagingResults" hidden>
+                <div class="paging-stats">
+                    <article class="paging-stat-card">
+                        <span>Page hits</span>
+                        <strong id="pagingHits">—</strong>
+                    </article>
+                    <article class="paging-stat-card">
+                        <span>Page faults</span>
+                        <strong id="pagingFaults">—</strong>
+                    </article>
+                    <article class="paging-stat-card">
+                        <span>Fault ratio</span>
+                        <strong id="pagingFaultRatio">—</strong>
+                    </article>
+                    <article class="paging-stat-card">
+                        <span>Oracle run ID</span>
+                        <strong id="pagingRunId">—</strong>
+                    </article>
+                </div>
+
+                <div class="paging-result-heading">
+                    <h3 id="pagingResultTitle">Simulation result</h3>
+                    <span id="pagingReferenceCount"></span>
+                </div>
+
+                <h3>Frame-by-frame visualization</h3>
+                <div id="pagingFrameVisualization" class="paging-frame-visualization"></div>
+
+                <h3>Execution details</h3>
+                <div class="table-wrapper">
+                    <table class="paging-table">
+                        <thead>
+                            <tr>
+                                <th>Step</th>
+                                <th>Page</th>
+                                <th>Frame state</th>
+                                <th>Result</th>
+                                <th>Replaced page</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pagingStepsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="pagingComparison" hidden>
+                <h3>Algorithm comparison</h3>
+                <p class="paging-hint">
+                    Lower page-fault count indicates better performance
+                    for the given reference string and frame count.
+                </p>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Algorithm</th>
+                                <th>Hits</th>
+                                <th>Faults</th>
+                                <th>Fault ratio</th>
+                                <th>Oracle run ID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pagingComparisonBody"></tbody>
+                    </table>
+                </div>
+
+                <h3>Page fault comparison</h3>
+                <div id="pagingComparisonChart" class="paging-comparison-chart"></div>
             </div>
         </section>
 

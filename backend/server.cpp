@@ -2,12 +2,14 @@
 #include "../database/oracle_db.h"
 #include "../os/deadlock/bankers.h"
 #include "../os/file-allocation/contiguous.h"
+#include "../os/paging/demand_paging.h"
 
 #include <cstdlib>
 #include <iostream>
 #include <mutex>
 #include <string>
 #include <sstream>
+#include <stdexcept>
 #include <vector>
 
 int main() {
@@ -503,6 +505,170 @@ int main() {
                 res.set_content(json.str(), "application/json");
             } catch (const std::exception&) {
                 error(400, "Invalid file-allocation input");
+            }
+        });
+
+
+    // Paging Simulation API
+    server.Post("/api/paging/run",
+        [&db, &dbMutex](const httplib::Request& req,
+                        httplib::Response& res) {
+
+            auto error = [&](int status, const std::string& message) {
+                res.status = status;
+                res.set_content(
+                    "{\"error\":\"" + message + "\"}",
+                    "application/json"
+                );
+            };
+
+            if (!req.has_param("algorithm") ||
+                !req.has_param("frame_count") ||
+                !req.has_param("reference_string")) {
+                error(400, "Provide algorithm, frame_count and reference_string");
+                return;
+            }
+
+            std::string algorithm = req.get_param_value("algorithm");
+            ReplacementAlgorithm selectedAlgorithm;
+
+            if (algorithm == "FIFO") {
+                selectedAlgorithm = ReplacementAlgorithm::FIFO;
+            } else if (algorithm == "LRU") {
+                selectedAlgorithm = ReplacementAlgorithm::LRU;
+            } else if (algorithm == "OPTIMAL") {
+                selectedAlgorithm = ReplacementAlgorithm::OPTIMAL;
+            } else {
+                error(400, "Algorithm must be FIFO, LRU or OPTIMAL");
+                return;
+            }
+
+            int frameCount;
+            try {
+                std::string value = req.get_param_value("frame_count");
+                std::size_t used = 0;
+                frameCount = std::stoi(value, &used);
+                if (used != value.size()) {
+                    throw std::invalid_argument("Invalid frame count");
+                }
+            } catch (...) {
+                error(400, "Invalid frame_count");
+                return;
+            }
+
+            if (frameCount < 1 || frameCount > 100) {
+                error(400, "Frame count must be between 1 and 100");
+                return;
+            }
+
+            std::vector<int> referenceString;
+
+            try {
+                std::istringstream input(
+                    req.get_param_value("reference_string")
+                );
+                std::string item;
+
+                while (std::getline(input, item, ',')) {
+                    if (item.empty()) {
+                        throw std::invalid_argument("Empty page number");
+                    }
+
+                    std::size_t used = 0;
+                    int page = std::stoi(item, &used);
+
+                    if (used != item.size() || page < 0) {
+                        throw std::invalid_argument("Invalid page number");
+                    }
+
+                    referenceString.push_back(page);
+
+                    if (referenceString.size() > 200) {
+                        error(400, "Maximum 200 page references allowed");
+                        return;
+                    }
+                }
+            } catch (...) {
+                error(400, "Invalid reference_string");
+                return;
+            }
+
+            if (referenceString.empty()) {
+                error(400, "Provide at least one page reference");
+                return;
+            }
+
+            try {
+                PagingReport report = simulatePaging(
+                    referenceString,
+                    frameCount,
+                    selectedAlgorithm
+                );
+
+                int runId;
+
+                {
+                    std::lock_guard<std::mutex> lock(dbMutex);
+                    runId = db.savePagingRun(
+                        frameCount,
+                        referenceString,
+                        report
+                    );
+                }
+
+                if (runId < 0) {
+                    error(500, "Could not save paging simulation to Oracle");
+                    return;
+                }
+
+                std::ostringstream json;
+
+                json << "{"
+                     << "\"run_id\":" << runId
+                     << ",\"algorithm\":\"" << report.algorithm << "\""
+                     << ",\"frame_count\":" << frameCount
+                     << ",\"total_references\":" << report.totalReferences
+                     << ",\"page_hits\":" << report.pageHits
+                     << ",\"page_faults\":" << report.pageFaults
+                     << ",\"page_fault_ratio\":" << report.pageFaultRatio
+                     << ",\"steps\":[";
+
+                for (std::size_t i = 0; i < report.steps.size(); ++i) {
+                    const auto& step = report.steps[i];
+
+                    if (i > 0) json << ",";
+
+                    json << "{"
+                         << "\"step_number\":" << (i + 1)
+                         << ",\"page_number\":" << step.pageNumber
+                         << ",\"page_fault\":"
+                         << (step.pageFault ? "true" : "false")
+                         << ",\"frames\":[";
+
+                    for (std::size_t j = 0; j < step.frames.size(); ++j) {
+                        if (j > 0) json << ",";
+                        json << step.frames[j];
+                    }
+
+                    json << "],\"replaced_page\":";
+
+                    if (step.replacedPage == -1) {
+                        json << "null";
+                    } else {
+                        json << step.replacedPage;
+                    }
+
+                    json << "}";
+                }
+
+                json << "]}";
+
+                res.set_header("Cache-Control", "no-store");
+                res.set_content(json.str(), "application/json");
+
+            } catch (const std::exception& e) {
+                std::cerr << "Paging API error: " << e.what() << '\n';
+                error(400, "Paging simulation failed");
             }
         });
 

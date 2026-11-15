@@ -602,3 +602,296 @@ setInterval(loadProcesses, 5000);
         }
     });
 })();
+
+
+/* =========================================
+   PAGING SIMULATOR INTEGRATION
+   ========================================= */
+
+(() => {
+    const form = document.getElementById("pagingForm");
+    if (!form || form.dataset.initialized === "true") return;
+
+    form.dataset.initialized = "true";
+
+    const algorithmInput = document.getElementById("pagingAlgorithm");
+    const frameInput = document.getElementById("pagingFrameCount");
+    const referenceInput = document.getElementById("pagingReferenceString");
+
+    const runButton = document.getElementById("runPagingButton");
+    const compareButton = document.getElementById("comparePagingButton");
+    const status = document.getElementById("pagingStatus");
+
+    const results = document.getElementById("pagingResults");
+    const comparison = document.getElementById("pagingComparison");
+
+    const API = "http://127.0.0.1:8080/api/paging/run";
+
+    function getInput() {
+        const frameCount = Number(frameInput.value);
+
+        if (!Number.isInteger(frameCount) || frameCount < 1 || frameCount > 100) {
+            throw new Error("Frame count must be between 1 and 100.");
+        }
+
+        const raw = referenceInput.value.trim();
+
+        if (!raw) {
+            throw new Error("Enter a page reference string.");
+        }
+
+        const parts = raw.split(",").map(value => value.trim());
+
+        if (parts.length > 200 || parts.some(value => !/^\d+$/.test(value))) {
+            throw new Error("Enter 1–200 non-negative page numbers separated by commas.");
+        }
+
+        return {
+            frameCount,
+            references: parts.map(Number)
+        };
+    }
+
+    async function executeAlgorithm(algorithm, input) {
+        const data = new URLSearchParams();
+
+        data.set("algorithm", algorithm);
+        data.set("frame_count", String(input.frameCount));
+        data.set("reference_string", input.references.join(","));
+
+        const response = await fetch(API, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: data.toString()
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || `Request failed (${response.status})`);
+        }
+
+        if (!Array.isArray(result.steps) ||
+            result.steps.length !== input.references.length) {
+            throw new Error("The API returned an incomplete paging result.");
+        }
+
+        return result;
+    }
+
+    function createCell(value, className = "") {
+        const cell = document.createElement("td");
+        cell.textContent = String(value);
+        if (className) cell.className = className;
+        return cell;
+    }
+
+    function renderResult(result) {
+        document.getElementById("pagingHits").textContent =
+            String(result.page_hits);
+
+        document.getElementById("pagingFaults").textContent =
+            String(result.page_faults);
+
+        document.getElementById("pagingFaultRatio").textContent =
+            `${(Number(result.page_fault_ratio) * 100).toFixed(2)}%`;
+
+        document.getElementById("pagingRunId").textContent =
+            String(result.run_id);
+
+        document.getElementById("pagingResultTitle").textContent =
+            `${result.algorithm} Simulation`;
+
+        document.getElementById("pagingReferenceCount").textContent =
+            `${result.total_references} page references · ${result.frame_count} frames`;
+
+        // Display final frame contents.
+        const finalFrames = result.steps[result.steps.length - 1].frames;
+        const frameContainer =
+            document.getElementById("pagingFrameVisualization");
+
+        frameContainer.replaceChildren();
+
+        finalFrames.forEach((page, index) => {
+            const card = document.createElement("div");
+            card.className = "paging-frame" + (page === -1 ? " empty" : "");
+
+            const label = document.createElement("span");
+            label.textContent = `Frame ${index + 1}`;
+
+            const value = document.createElement("strong");
+            value.textContent = page === -1 ? "Empty" : String(page);
+
+            card.append(label, value);
+            frameContainer.appendChild(card);
+        });
+
+        // Display every execution step.
+        const body = document.getElementById("pagingStepsBody");
+        body.replaceChildren();
+
+        result.steps.forEach(step => {
+            const row = document.createElement("tr");
+
+            row.appendChild(createCell(step.step_number));
+            row.appendChild(createCell(step.page_number));
+
+            const framesCell = document.createElement("td");
+            const frames = document.createElement("div");
+            frames.className = "paging-frames";
+
+            step.frames.forEach(page => {
+                const frame = document.createElement("span");
+                frame.className = "paging-mini-frame";
+                frame.textContent = page === -1 ? "—" : String(page);
+                frames.appendChild(frame);
+            });
+
+            framesCell.appendChild(frames);
+            row.appendChild(framesCell);
+
+            row.appendChild(createCell(
+                step.page_fault ? "PAGE FAULT" : "PAGE HIT",
+                step.page_fault ? "paging-fault" : "paging-hit"
+            ));
+
+            row.appendChild(createCell(
+                step.replaced_page === null ||
+                step.replaced_page === undefined
+                    ? "—"
+                    : step.replaced_page
+            ));
+
+            body.appendChild(row);
+        });
+
+        results.hidden = false;
+    }
+
+    function renderComparison(reports) {
+        const body = document.getElementById("pagingComparisonBody");
+        const chart = document.getElementById("pagingComparisonChart");
+
+        body.replaceChildren();
+        chart.replaceChildren();
+
+        const maximumFaults = Math.max(
+            1,
+            ...reports.map(report => Number(report.page_faults))
+        );
+
+        reports.forEach(report => {
+            const row = document.createElement("tr");
+
+            row.appendChild(createCell(report.algorithm));
+            row.appendChild(createCell(report.page_hits));
+            row.appendChild(createCell(report.page_faults));
+            row.appendChild(createCell(
+                `${(Number(report.page_fault_ratio) * 100).toFixed(2)}%`
+            ));
+            row.appendChild(createCell(report.run_id));
+
+            body.appendChild(row);
+
+            const barRow = document.createElement("div");
+            barRow.className = "paging-bar-row";
+
+            const label = document.createElement("strong");
+            label.textContent = report.algorithm;
+
+            const track = document.createElement("div");
+            track.className = "paging-bar-track";
+
+            const bar = document.createElement("div");
+            bar.className = "paging-bar";
+            bar.style.width =
+                `${Number(report.page_faults) / maximumFaults * 100}%`;
+
+            track.appendChild(bar);
+
+            const value = document.createElement("strong");
+            value.textContent = String(report.page_faults);
+
+            barRow.append(label, track, value);
+            chart.appendChild(barRow);
+        });
+
+        comparison.hidden = false;
+    }
+
+    function setBusy(busy) {
+        runButton.disabled = busy;
+        compareButton.disabled = busy;
+        algorithmInput.disabled = busy;
+        frameInput.disabled = busy;
+        referenceInput.disabled = busy;
+    }
+
+    form.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        setBusy(true);
+        comparison.hidden = true;
+        status.textContent = "Running simulation and saving results to Oracle...";
+
+        try {
+            const input = getInput();
+            const algorithm = algorithmInput.value;
+
+            const result = await executeAlgorithm(algorithm, input);
+
+            renderResult(result);
+
+            status.textContent =
+                `${algorithm} completed successfully. Oracle run ID: ${result.run_id}.`;
+        } catch (error) {
+            status.textContent = `Paging simulation failed: ${error.message}`;
+        } finally {
+            setBusy(false);
+        }
+    });
+
+    compareButton.addEventListener("click", async () => {
+        setBusy(true);
+        comparison.hidden = true;
+        status.textContent = "Running FIFO, LRU and Optimal simulations...";
+
+        try {
+            const input = getInput();
+            const algorithms = ["FIFO", "LRU", "OPTIMAL"];
+
+            const reports = [];
+
+            for (const algorithm of algorithms) {
+                status.textContent =
+                    `Running ${algorithm} and saving to Oracle...`;
+
+                const result = await executeAlgorithm(algorithm, input);
+                reports.push(result);
+            }
+
+            renderComparison(reports);
+
+            // Show Optimal's detailed steps after comparison.
+            const optimal = reports.find(report => report.algorithm === "OPTIMAL");
+            if (optimal) {
+                renderResult(optimal);
+            }
+
+            const best = reports.reduce((a, b) =>
+                Number(a.page_faults) <= Number(b.page_faults) ? a : b
+            );
+
+            status.textContent =
+                `Comparison completed. Best result: ${best.algorithm} with ${best.page_faults} page faults. All three runs saved to Oracle.`;
+
+        } catch (error) {
+            status.textContent = `Comparison failed: ${error.message}`;
+        } finally {
+            setBusy(false);
+        }
+    });
+})();
+

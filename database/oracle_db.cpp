@@ -641,7 +641,7 @@ int OracleDB::saveDeadlockRun(
 }
 
 
-// Persist a contiguous file-allocation simulation and all its attempts.
+// Persist a complete file allocation analysis in Oracle.
 int OracleDB::saveFileAllocationRun(
     int totalBlocks,
     int freeBlocks,
@@ -703,6 +703,7 @@ int OracleDB::saveFileAllocationRun(
                     attempt.file.startBlock + attempt.file.blockCount > totalBlocks) {
                     throw std::invalid_argument("Allocated block range is invalid");
                 }
+
                 resultStmt->setInt(5, attempt.file.startBlock);
                 resultStmt->setInt(
                     6, attempt.file.startBlock + attempt.file.blockCount - 1
@@ -714,6 +715,7 @@ int OracleDB::saveFileAllocationRun(
 
             std::string message = attempt.message;
             if (message.size() > 250) message.resize(250);
+
             resultStmt->setString(7, message);
             resultStmt->executeUpdate();
         }
@@ -723,6 +725,7 @@ int OracleDB::saveFileAllocationRun(
 
         conn->commit();
         return runId;
+
     } catch (SQLException& e) {
         std::cerr << "Saving file allocation run failed: "
                   << e.getMessage() << '\n';
@@ -741,3 +744,115 @@ int OracleDB::saveFileAllocationRun(
     try { conn->rollback(); } catch (...) {}
     return -1;
 }
+
+
+// Persist a complete paging simulation in Oracle.
+int OracleDB::savePagingRun(
+    int frameCount,
+    const std::vector<int>& referenceString,
+    const PagingReport& report
+) {
+    using namespace oracle::occi;
+
+    if (conn == nullptr ||
+        frameCount <= 0 ||
+        referenceString.size() != report.steps.size() ||
+        report.totalReferences != static_cast<int>(referenceString.size()) ||
+        report.pageHits + report.pageFaults != report.totalReferences ||
+        report.algorithm.empty() ||
+        report.algorithm.size() > 20) {
+        return -1;
+    }
+
+    Statement* runStmt = nullptr;
+    Statement* stepStmt = nullptr;
+    int runId = -1;
+
+    try {
+        runStmt = conn->createStatement(
+            "INSERT INTO PAGING_RUN "
+            "(algorithm, frame_count, reference_count, "
+            "page_hits, page_faults, fault_ratio) "
+            "VALUES (:1, :2, :3, :4, :5, :6) "
+            "RETURNING run_id INTO :7"
+        );
+
+        runStmt->setString(1, report.algorithm);
+        runStmt->setInt(2, frameCount);
+        runStmt->setInt(3, report.totalReferences);
+        runStmt->setInt(4, report.pageHits);
+        runStmt->setInt(5, report.pageFaults);
+        runStmt->setDouble(6, report.pageFaultRatio);
+        runStmt->registerOutParam(7, OCCIINT);
+
+        runStmt->executeUpdate();
+        runId = runStmt->getInt(7);
+
+        conn->terminateStatement(runStmt);
+        runStmt = nullptr;
+
+        stepStmt = conn->createStatement(
+            "INSERT INTO PAGING_STEP "
+            "(run_id, step_number, page_number, frame_state, "
+            "is_page_fault, replaced_page) "
+            "VALUES (:1, :2, :3, :4, :5, :6)"
+        );
+
+        for (size_t i = 0; i < report.steps.size(); i++) {
+            const auto& step = report.steps[i];
+
+            if (step.pageNumber != referenceString[i] ||
+                step.frames.size() != static_cast<size_t>(frameCount)) {
+                throw std::invalid_argument("Invalid paging step data");
+            }
+
+            std::ostringstream frameState;
+            frameState << "[";
+
+            for (size_t j = 0; j < step.frames.size(); j++) {
+                if (j > 0) frameState << ",";
+                frameState << step.frames[j];
+            }
+
+            frameState << "]";
+
+            stepStmt->setInt(1, runId);
+            stepStmt->setInt(2, static_cast<int>(i + 1));
+            stepStmt->setInt(3, step.pageNumber);
+            stepStmt->setString(4, frameState.str());
+            stepStmt->setInt(5, step.pageFault ? 1 : 0);
+
+            if (step.replacedPage == -1) {
+                stepStmt->setNull(6, OCCIINT);
+            } else {
+                stepStmt->setInt(6, step.replacedPage);
+            }
+
+            stepStmt->executeUpdate();
+        }
+
+        conn->terminateStatement(stepStmt);
+        stepStmt = nullptr;
+
+        conn->commit();
+        return runId;
+
+    } catch (SQLException& e) {
+        std::cerr << "Saving paging run failed: "
+                  << e.getMessage() << '\n';
+    } catch (const std::exception& e) {
+        std::cerr << "Saving paging run failed: "
+                  << e.what() << '\n';
+    }
+
+    if (runStmt) {
+        try { conn->terminateStatement(runStmt); } catch (...) {}
+    }
+    if (stepStmt) {
+        try { conn->terminateStatement(stepStmt); } catch (...) {}
+    }
+
+    try { conn->rollback(); } catch (...) {}
+    return -1;
+}
+

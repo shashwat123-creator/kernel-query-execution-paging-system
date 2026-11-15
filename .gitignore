@@ -14,3 +14,12 @@ os/file-allocation/test_fragmentation
 os/file-allocation/test_persistence
 os/deadlock/test_bankers
 os/deadlock/test_persistence
+
+# Backup and temporary files
+*.bak
+*.backup
+*.damaged_copy
+
+# Compiled test executables
+os/paging/test_demand_paging
+os/paging/test_paging

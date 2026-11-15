@@ -570,3 +570,243 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* =========================================
+   PAGING SIMULATOR INTEGRATION
+   ========================================= */
+
+#pagingSimulator {
+    margin-bottom: 24px;
+}
+
+.paging-controls {
+    display: grid;
+    grid-template-columns: minmax(150px, 1fr) minmax(120px, 0.7fr) minmax(220px, 2fr);
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.paging-controls label {
+    display: grid;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.paging-controls input,
+.paging-controls select {
+    width: 100%;
+    min-width: 0;
+    padding: 11px;
+    border: 1px solid #dfe3ed;
+    border-radius: 8px;
+    background: white;
+    color: var(--text);
+    font: inherit;
+}
+
+.paging-hint {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+    margin: 12px 0;
+}
+
+.paging-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 18px 0;
+}
+
+#comparePagingButton {
+    background: #29334f;
+}
+
+#comparePagingButton:hover {
+    background: #1b243b;
+}
+
+#pagingStatus {
+    color: var(--muted);
+    font-size: 13px;
+    min-height: 20px;
+}
+
+#pagingResults,
+#pagingComparison {
+    margin-top: 24px;
+}
+
+.paging-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.paging-stat-card {
+    padding: 18px;
+    border: 1px solid var(--line);
+    background: #fafaff;
+    border-radius: 11px;
+}
+
+.paging-stat-card span {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.paging-stat-card strong {
+    display: block;
+    font-size: 25px;
+    margin-top: 12px;
+    overflow-wrap: anywhere;
+}
+
+.paging-result-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 25px;
+}
+
+.paging-result-heading h3 {
+    margin: 0;
+}
+
+.paging-result-heading span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.paging-frame-visualization {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+    gap: 12px;
+    margin: 15px 0 25px;
+}
+
+.paging-frame {
+    border: 1px solid var(--line);
+    background: #fafaff;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.paging-frame span {
+    display: block;
+    color: var(--muted);
+    font-size: 11px;
+    margin-bottom: 10px;
+}
+
+.paging-frame strong {
+    font-size: 23px;
+}
+
+.paging-frame.empty {
+    background: #f1f3f8;
+    color: #9aa2b1;
+}
+
+.paging-table td {
+    vertical-align: middle;
+}
+
+.paging-frames {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.paging-mini-frame {
+    padding: 5px 9px;
+    min-width: 32px;
+    text-align: center;
+    border: 1px solid #dfe3ed;
+    border-radius: 5px;
+    background: #f3f4ff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.paging-fault {
+    color: #bd3434;
+    font-weight: 700;
+}
+
+.paging-hit {
+    color: #16845b;
+    font-weight: 700;
+}
+
+.paging-comparison-chart {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.paging-bar-row {
+    display: grid;
+    grid-template-columns: 85px minmax(0, 1fr) 45px;
+    gap: 12px;
+    align-items: center;
+    font-size: 12px;
+}
+
+.paging-bar-track {
+    height: 17px;
+    background: #edf0f7;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.paging-bar {
+    height: 100%;
+    min-width: 2px;
+    border-radius: 20px;
+    background: var(--accent);
+    transition: width 0.3s ease;
+}
+
+@media (max-width: 900px) {
+    .paging-controls {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .paging-reference-field {
+        grid-column: 1 / -1;
+    }
+
+    .paging-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .paging-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .paging-reference-field {
+        grid-column: auto;
+    }
+
+    .paging-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .paging-stat-card {
+        padding: 13px;
+    }
+
+    .paging-stat-card strong {
+        font-size: 21px;
+    }
+}
+
