@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <strong>A unified simulation platform connecting Operating System algorithms with database-driven execution.</strong>
+  <strong>A unified simulation platform connecting Operating System algorithms with database-backed execution.</strong>
 </p>
 
 <p align="center">
