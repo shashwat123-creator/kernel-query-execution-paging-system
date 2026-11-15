@@ -149,7 +149,7 @@ A separate C++ monitoring agent collects process-related information and resourc
 <a id="system-architecture"></a>
 ## 🏗️ 3. System Architecture
 
-The application follows a modular, layered architecture. The frontend communicates with the C++ backend, which coordinates OS algorithms and Oracle Database operations.
+The application follows a modular and layered architecture. The frontend communicates with the C++ backend, which coordinates OS algorithms and Oracle Database operations.
 
 ### Architecture Diagram
 
