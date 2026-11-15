@@ -1,7 +1,7 @@
 # ⚙️ Kernel Query Execution & Paging System
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=24&duration=3000&pause=1000&color=00D9FF&center=true&vCenter=true&width=850&lines=Operating+Systems+%2B+DBMS;Kernel-Level+Algorithm+Simulation;Demand+Paging+%7C+CPU+Scheduling;Oracle-Powered+Execution+Persistence" alt="Typing SVG" />
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=23&duration=3000&pause=1000&color=00D9FF&center=true&vCenter=true&width=850&lines=Operating+Systems+%2B+DBMS;Kernel-Level+Algorithm+Simulation;Demand+Paging+%7C+CPU+Scheduling;Oracle-Powered+Execution+Persistence" alt="Typing SVG">
 </p>
 
 <p align="center">
@@ -9,38 +9,32 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=cplusplus&logoColor=white" />
-  <img src="https://img.shields.io/badge/Oracle-Database-F80000?style=for-the-badge&logo=oracle&logoColor=white" />
-  <img src="https://img.shields.io/badge/JavaScript-ES6-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" />
-  <img src="https://img.shields.io/badge/Docker-Containerized-2496ED?style=for-the-badge&logo=docker&logoColor=white" />
+  <img src="https://img.shields.io/badge/C%2B%2B-17-00599C?style=for-the-badge&logo=cplusplus&logoColor=white">
+  <img src="https://img.shields.io/badge/Oracle-Database-F80000?style=for-the-badge&logo=oracle&logoColor=white">
+  <img src="https://img.shields.io/badge/JavaScript-ES6-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black">
+  <img src="https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Frontend-HTML%20%7C%20CSS%20%7C%20JS-orange?style=flat-square" />
-  <img src="https://img.shields.io/badge/Backend-C%2B%2B-blue?style=flat-square" />
-  <img src="https://img.shields.io/badge/Database-Oracle-red?style=flat-square" />
-  <img src="https://img.shields.io/badge/Status-Active-success?style=flat-square" />
-</p>
-
-<p align="center">
-  <a href="#-overview">Overview</a> •
-  <a href="#-modules">Modules</a> •
-  <a href="#-architecture">Architecture</a> •
-  <a href="#-database-design">Database</a> •
-  <a href="#-api-reference">API</a> •
-  <a href="#-setup-and-installation">Setup</a> •
-  <a href="#-testing">Testing</a>
+  <a href="#overview">Overview</a> •
+  <a href="#modules">Modules</a> •
+  <a href="#system-architecture">Architecture</a> •
+  <a href="#database-design">Database</a> •
+  <a href="#api-reference">API</a> •
+  <a href="#setup-and-installation">Setup</a> •
+  <a href="#testing">Testing</a>
 </p>
 
 ---
 
-## ✨ Overview
+<a id="overview"></a>
+## ✨ 1. Overview
 
 **Kernel Query Execution & Paging System** is an integrated Operating Systems and Database Management Systems project designed to simulate, execute, visualize, and persist fundamental Operating System operations.
 
 The platform combines modular C++ implementations of OS algorithms with Oracle Database connectivity and an interactive web dashboard.
 
-Unlike standalone algorithm implementations, this system provides a unified environment where users can:
+Users can:
 
 - Execute Operating System algorithm simulations.
 - Visualize intermediate execution states.
@@ -49,28 +43,27 @@ Unlike standalone algorithm implementations, this system provides a unified envi
 - Persist execution records in Oracle Database.
 - Monitor process information and resource utilization.
 
-The project demonstrates how Operating System concepts can be integrated with database management and modern application architecture.
-
-## 🎯 Project Objectives
+### Project Objectives
 
 - Implement fundamental OS algorithms using modular C++.
-- Integrate Operating System simulations with Oracle Database.
+- Integrate OS simulations with Oracle Database.
 - Design REST-based communication between frontend and backend.
 - Visualize algorithm execution through an interactive dashboard.
 - Persist simulation results and execution history.
 - Demonstrate database connectivity using Oracle OCCI.
 - Apply modular programming and separation of concerns.
 
-## 🧠 Modules
+---
 
-The system currently consists of five major functional modules.
+<a id="modules"></a>
+## 🧠 2. Core Modules
 
 <details>
-<summary><strong>⚡ 01. CPU Scheduling</strong></summary>
+<summary><strong>⚡ CPU Scheduling</strong></summary>
 
 Implements CPU scheduling algorithms to simulate process execution and CPU allocation.
 
-**Algorithms implemented:**
+**Algorithms:**
 - First Come First Serve (FCFS)
 - Round Robin (RR)
 
@@ -84,7 +77,7 @@ Implements CPU scheduling algorithms to simulate process execution and CPU alloc
 </details>
 
 <details>
-<summary><strong>🔒 02. Deadlock Avoidance</strong></summary>
+<summary><strong>🔒 Deadlock Avoidance</strong></summary>
 
 Implements the Banker's Algorithm to determine whether resource allocation can leave the system in a safe state.
 
@@ -99,7 +92,7 @@ Implements the Banker's Algorithm to determine whether resource allocation can l
 </details>
 
 <details>
-<summary><strong>📁 03. Contiguous File Allocation</strong></summary>
+<summary><strong>📁 Contiguous File Allocation</strong></summary>
 
 Simulates contiguous file allocation in which each file occupies consecutive disk blocks.
 
@@ -113,11 +106,11 @@ Simulates contiguous file allocation in which each file occupies consecutive dis
 </details>
 
 <details>
-<summary><strong>🧮 04. Demand Paging & Page Replacement</strong></summary>
+<summary><strong>🧮 Demand Paging and Page Replacement</strong></summary>
 
 Implements demand paging and compares three classical page replacement algorithms.
 
-**Algorithms implemented:**
+**Algorithms:**
 
 | Algorithm | Replacement Strategy |
 |---|---|
@@ -137,7 +130,7 @@ Implements demand paging and compares three classical page replacement algorithm
 </details>
 
 <details>
-<summary><strong>📊 05. Process Monitoring</strong></summary>
+<summary><strong>📊 Process Monitoring</strong></summary>
 
 A separate C++ monitoring agent collects process-related information and resource utilization measurements.
 
@@ -151,43 +144,65 @@ A separate C++ monitoring agent collects process-related information and resourc
 
 </details>
 
-## 🏗️ Architecture
+---
 
-The application follows a modular, layered architecture that separates presentation, backend processing, OS algorithms, and database persistence.
+<a id="system-architecture"></a>
+## 🏗️ 3. System Architecture
+
+The application follows a modular, layered architecture. The frontend communicates with the C++ backend, which coordinates OS algorithms and Oracle Database operations.
+
+### Architecture Diagram
 
 ```mermaid
-flowchart TD
-    U["User"] --> UI["Web Dashboard<br/>HTML / CSS / JavaScript"]
-    UI --> API["C++ Backend API<br/>cpp-httplib"]
+flowchart TB
+    USER["User"]
 
-    API --> CPU["CPU Scheduling"]
-    API --> DL["Deadlock Avoidance"]
-    API --> FA["File Allocation"]
-    API --> PG["Demand Paging"]
+    subgraph FRONTEND["Presentation Layer"]
+        UI["Web Dashboard<br/>HTML, CSS, JavaScript"]
+    end
 
-    MON["C++ Process Monitoring Agent"] --> DB[("Oracle Database")]
+    subgraph BACKEND["Backend Layer"]
+        API["C++ REST API<br/>cpp-httplib"]
+    end
+
+    subgraph OS["Operating System Modules"]
+        CPU["CPU Scheduling<br/>FCFS, Round Robin"]
+        DEADLOCK["Deadlock Avoidance<br/>Banker's Algorithm"]
+        FILE["File Allocation<br/>Contiguous Allocation"]
+        PAGING["Demand Paging<br/>FIFO, LRU, Optimal"]
+    end
+
+    MONITOR["C++ Process Monitoring Agent"]
+
+    subgraph DATABASE["Database Layer"]
+        DB[("Oracle Database")]
+    end
+
+    USER --> UI
+    UI --> API
+
+    API --> CPU
+    API --> DEADLOCK
+    API --> FILE
+    API --> PAGING
 
     CPU --> DB
-    DL --> DB
-    FA --> DB
-    PG --> DB
+    DEADLOCK --> DB
+    FILE --> DB
+    PAGING --> DB
+
+    MONITOR --> DB
 
     DB --> API
     API --> UI
-
-    style U fill:#2563eb,color:#fff
-    style UI fill:#0f766e,color:#fff
-    style API fill:#7c3aed,color:#fff
-    style DB fill:#b91c1c,color:#fff
-    style PG fill:#0369a1,color:#fff
 ```
 
-### Architectural Layers
+### Architecture Components
 
 | Layer | Responsibility | Technology |
 |---|---|---|
 | Presentation | Dashboard and user interaction | HTML, CSS, JavaScript |
-| Backend | API routing, validation and execution coordination | C++ |
+| Backend | API routing and execution coordination | C++ |
 | OS Engine | Scheduling, deadlock, allocation and paging | C++ |
 | Database | Persistent storage and retrieval | Oracle Database |
 | Monitoring | Process and resource collection | C++ |
@@ -198,13 +213,16 @@ flowchart TD
 2. The frontend sends an HTTP request to the C++ backend.
 3. The backend validates the request parameters.
 4. The corresponding OS algorithm executes.
-5. The execution results are returned to the frontend.
-6. The backend stores the simulation results in Oracle Database.
+5. The backend persists supported simulation results in Oracle Database.
+6. The execution result is returned to the frontend.
 7. The dashboard displays the results and execution details.
 
-## 🗄️ Database Design
+---
 
-Oracle Database is used as the persistent storage layer of the application.
+<a id="database-design"></a>
+## 🗄️ 4. Database Design
+
+Oracle Database acts as the persistent storage layer of the application.
 
 The C++ backend communicates with Oracle using the **Oracle C++ Call Interface (OCCI)**.
 
@@ -216,9 +234,35 @@ The C++ backend communicates with Oracle using the **Oracle C++ Call Interface (
 - Store resource utilization measurements.
 - Support structured retrieval of execution records.
 
-### Paging Database Schema
+### Paging Database ER Diagram
 
-The paging module uses two principal tables.
+The paging implementation uses two principal tables: `PAGING_RUN` and `PAGING_STEP`.
+
+```mermaid
+erDiagram
+    PAGING_RUN ||--o{ PAGING_STEP : contains
+
+    PAGING_RUN {
+        NUMBER RUN_ID PK
+        VARCHAR2 ALGORITHM
+        NUMBER FRAME_COUNT
+        NUMBER REFERENCE_COUNT
+        NUMBER PAGE_HITS
+        NUMBER PAGE_FAULTS
+        NUMBER FAULT_RATIO
+    }
+
+    PAGING_STEP {
+        NUMBER RUN_ID FK
+        NUMBER STEP_NUMBER
+        NUMBER PAGE_NUMBER
+        VARCHAR2 FRAME_STATE
+        NUMBER PAGE_FAULT
+        NUMBER REPLACED_PAGE
+    }
+```
+
+### Table Descriptions
 
 **PAGING_RUN**
 
@@ -247,20 +291,22 @@ Stores individual execution steps associated with a paging run.
 | PAGE_FAULT | Whether a page fault occurred |
 | REPLACED_PAGE | Page removed from memory, if any |
 
-The relationship between `PAGING_RUN` and `PAGING_STEP` provides a structured representation of simulation history.
+**Relationship:** One paging run can contain multiple execution steps. The `RUN_ID` links each execution step to its parent simulation.
 
-## 📈 Paging Algorithm Performance
+---
+
+## 📈 5. Paging Algorithm Performance
 
 The paging simulator supports direct comparison of FIFO, LRU and Optimal page replacement algorithms.
 
-**Sample input**
+**Sample Input**
 
 ```text
 Reference String: 7,0,1,2,0,3,0,4,2,3,0,3,2
 Number of Frames: 3
 ```
 
-**Expected results**
+**Expected Results**
 
 | Algorithm | Page Hits | Page Faults | Fault Ratio |
 |---|---:|---:|---:|
@@ -268,22 +314,22 @@ Number of Frames: 3
 | LRU | 4 | 9 | 69.23% |
 | Optimal | 6 | 7 | 53.85% |
 
-### Visual Comparison
+### Page Fault Comparison
 
 ```text
-Page Fault Comparison
-
-FIFO     ██████████  10
-LRU      █████████   9
-OPTIMAL  ███████     7
+FIFO      ██████████  10
+LRU       █████████   9
+OPTIMAL   ███████     7
 ```
 
-The Optimal algorithm produces the lowest number of page faults for this reference string.
+For this reference string, Optimal produces the lowest number of page faults.
 
-## 🛠️ Technology Stack
+---
+
+## 🛠️ 6. Technology Stack
 
 <p align="center">
-  <img src="https://skillicons.dev/icons?i=cpp,html,css,js,docker,git,github,vscode" />
+  <img src="https://skillicons.dev/icons?i=cpp,html,css,js,docker,git,github,vscode">
 </p>
 
 | Category | Technology |
@@ -297,7 +343,9 @@ The Optimal algorithm produces the lowest number of page faults for this referen
 | Communication | HTTP and JSON |
 | Version Control | Git and GitHub |
 
-## 📂 Project Structure
+---
+
+## 📂 7. Project Structure
 
 ```text
 kernel-query-execution-paging-system/
@@ -339,7 +387,10 @@ kernel-query-execution-paging-system/
 └── README.md
 ```
 
-## 🔌 API Reference
+---
+
+<a id="api-reference"></a>
+## 🔌 8. API Reference
 
 The C++ backend exposes HTTP endpoints for dashboard operations and algorithm simulations.
 
@@ -362,7 +413,7 @@ POST /api/paging/run
 Content-Type: application/x-www-form-urlencoded
 ```
 
-**Request parameters**
+**Request Parameters**
 
 ```text
 algorithm=FIFO
@@ -370,7 +421,7 @@ frame_count=3
 reference_string=7,0,1,2,0,3,0,4,2,3,0,3,2
 ```
 
-**Example response**
+**Example Response**
 
 ```json
 {
@@ -385,9 +436,12 @@ reference_string=7,0,1,2,0,3,0,4,2,3,0,3,2
 }
 ```
 
-The actual response includes the complete execution-step array.
+The actual API response includes the complete execution-step array.
 
-## 🚀 Setup and Installation
+---
+
+<a id="setup-and-installation"></a>
+## 🚀 9. Setup and Installation
 
 ### Prerequisites
 
@@ -398,7 +452,7 @@ The actual response includes the complete execution-step array.
 - Python 3.
 - Git.
 
-### 1. Clone the Repository
+### Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/shashwat123-creator/kernel-query-execution-paging-system.git
@@ -406,7 +460,7 @@ git clone https://github.com/shashwat123-creator/kernel-query-execution-paging-s
 cd kernel-query-execution-paging-system
 ```
 
-### 2. Start Oracle Database
+### Step 2: Start Oracle Database
 
 For a fresh Docker installation:
 
@@ -425,7 +479,7 @@ docker start oracle-free
 
 Wait until the database is ready.
 
-### 3. Configure Database Credentials
+### Step 3: Configure Database Credentials
 
 Configure the Oracle application user and create the required database tables using the database initialization instructions for the project.
 
@@ -445,7 +499,7 @@ Port:     1521
 
 Never commit actual credentials to GitHub.
 
-### 4. Configure Oracle Instant Client
+### Step 4: Configure Oracle Instant Client
 
 Install Oracle Instant Client and the OCCI development libraries.
 
@@ -457,7 +511,7 @@ $HOME/Downloads/instantclient_23_26
 
 Adjust this path according to your local installation.
 
-### 5. Compile the Backend
+### Step 5: Compile the Backend
 
 Example compilation command for the macOS development environment:
 
@@ -476,7 +530,7 @@ clang++ -std=c++17 -Wall -Wextra -pedantic \
   -pthread -o backend/server
 ```
 
-### 6. Start the Backend
+### Step 6: Start the Backend
 
 ```bash
 export ORACLE_APP_PASSWORD='YOUR_ORACLE_PASSWORD'
@@ -491,7 +545,7 @@ Connected to Oracle Database.
 Kernel Query API running at http://localhost:8080
 ```
 
-### 7. Start the Frontend
+### Step 7: Start the Frontend
 
 Open a separate Terminal window:
 
@@ -505,13 +559,16 @@ Open the dashboard:
 
 **http://localhost:5500**
 
-### 8. Start the Process Monitoring Agent
+### Step 8: Start the Process Monitoring Agent
 
 The process monitoring agent runs independently of the backend.
 
 Build and start the agent using its C++ source and the required Oracle connectivity configuration.
 
-## 🧪 Testing
+---
+
+<a id="testing"></a>
+## 🧪 10. Testing
 
 The project contains dedicated C++ test programs for paging implementations.
 
@@ -551,7 +608,9 @@ node --check frontend/js/app.js
 curl http://localhost:8080/api/health
 ```
 
-## 🔮 Future Enhancements
+---
+
+## 🔮 11. Future Enhancements
 
 Potential future development areas:
 
@@ -565,7 +624,9 @@ Potential future development areas:
 - Automated testing and CI/CD integration.
 - Complete containerized application deployment.
 
-## 👨‍💻 Contributors
+---
+
+## 👨‍💻 12. Contributors
 
 Developed as an academic integrated project combining Operating Systems and Database Management Systems.
 
@@ -577,7 +638,6 @@ Developed as an academic integrated project combining Operating Systems and Data
 
 <p align="center">
   <strong>Built with C++ · Oracle Database · JavaScript</strong>
-  <br/>
-  <br/>
+  <br><br>
   <i>Simulate. Analyze. Persist. Understand.</i>
 </p>
